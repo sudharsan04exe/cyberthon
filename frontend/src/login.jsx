@@ -1,4 +1,3 @@
-// src/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,18 +9,17 @@ const Login = () => {
   const handleLogin = (e) => {
     e.preventDefault();
 
-    // Placeholder check
     const storedUser = JSON.parse(localStorage.getItem('user'));
     if (storedUser && storedUser.email === email && storedUser.password === password) {
       localStorage.setItem('isAuthenticated', 'true');
-      navigate('/');
+      navigate('/dashboard'); // Redirect to Dashboard after login
     } else {
       alert('Invalid credentials');
     }
   };
 
   return (
-    <div className="flex items-center justify-center h-screen">
+    <div className="flex items-center justify-center h-screen bg-gray-100">
       <form onSubmit={handleLogin} className="bg-white p-6 rounded-lg shadow-md w-80">
         <h2 className="text-xl font-bold mb-4 text-center">Login</h2>
         <input
@@ -40,9 +38,14 @@ const Login = () => {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button className="w-full bg-blue-600 text-white p-2 rounded">Login</button>
+        <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded">
+          Login
+        </button>
         <p className="mt-3 text-sm text-center">
-          Don't have an account? <a className="text-blue-500" href="/register">Register</a>
+          Don't have an account?{' '}
+          <a className="text-blue-500" href="/register">
+            Register
+          </a>
         </p>
       </form>
     </div>
