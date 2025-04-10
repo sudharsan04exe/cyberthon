@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { CdrProvider } from './CdrContext_temp'; // Import the provider
 import Dashboard from './Dashboard';
 import UploadCDR from './Upload';
 import TrackByLocation from './Trackbylocation';
@@ -12,9 +13,11 @@ import 'leaflet/dist/leaflet.css';
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <CdrProvider> {/* Wrap the app with CdrProvider */}
+      <Router>
+        <AppContent />
+      </Router>
+    </CdrProvider>
   );
 }
 
@@ -29,7 +32,6 @@ function AppContent() {
       {!hideSidebar && <Sidebar />}
       <div className="flex-1 p-4">
         <Routes>
-          {/* Redirect '/' to '/register' */}
           <Route path="/" element={<Navigate to="/register" />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
