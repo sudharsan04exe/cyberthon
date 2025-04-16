@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { LatLngExpression } from 'leaflet'; // For TypeScript, you can omit it if using JS
+import 'leaflet/dist/leaflet.css'; // Import Leaflet CSS
 
 const TrackByLocation = () => {
   const [location, setLocation] = useState('');
   const [fromDateTime, setFromDateTime] = useState('');
   const [toDateTime, setToDateTime] = useState('');
   const [filteredData, setFilteredData] = useState([]);
+  const [visualize, setVisualize] = useState(false); // State to track if map should display markers
 
   // Dummy data
   const dummyData = [
@@ -16,7 +20,7 @@ const TrackByLocation = () => {
       duration: '5 mins',
     },
     {
-      location: 'Mumbai',
+      location: 'Delhi',
       coordinates: { lat: 28.6139, lng: 77.2090 },
       dateTime: '2025-03-10T15:00',
       number: '9123456780',
@@ -45,12 +49,8 @@ const TrackByLocation = () => {
       alert('No records to visualize');
       return;
     }
-
-    const { coordinates } = filteredData[0];
-    const numbers = filteredData.map(item => item.number).join(', ');
-    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${coordinates.lat},${coordinates.lng}&query_place_id=${encodeURIComponent(numbers)}`;
-
-    window.open(mapUrl, '_blank');
+    
+    setVisualize(true);  // Enable visualization to show markers on the map
   };
 
   return (
@@ -113,6 +113,34 @@ const TrackByLocation = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Render Map if there's filtered data and Visualize is true */}
+      {visualize && filteredData.length > 0 && (
+        <div className="mt-8" style={{ height: '400px' }}>
+          <MapContainer
+            center={[filteredData[0].coordinates.lat, filteredData[0].coordinates.lng]}
+            zoom={13}
+            style={{ width: '100%', height: '100%' }}
+          >
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+            {filteredData.map((data, index) => (
+              <Marker key={index} position={[data.coordinates.lat, data.coordinates.lng]}>
+                <Popup>
+                  <div>
+                    <strong>{data.location}</strong><br />
+                    {new Date(data.dateTime).toLocaleString()}<br />
+                    {data.number}<br />
+                    {data.duration}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
         </div>
       )}
     </div>
