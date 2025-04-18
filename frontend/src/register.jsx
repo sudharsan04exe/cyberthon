@@ -1,25 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    
-    const existingUser = JSON.parse(localStorage.getItem('user'));
-    if (existingUser) {
-      alert('Account already exists! Redirecting to login.');
-      navigate('/login');
-      return;
-    }
 
-    const user = { email, password };
-    localStorage.setItem('user', JSON.stringify(user));
-    alert('Registered Successfully');
-    navigate('/login'); // Redirect to login after successful registration
+    try {
+      // API call to backend
+      const response = await axios.post('http://localhost:5000/api/auth/register', {
+        email,
+        password
+      });
+
+      alert(response.data.message || 'Registered Successfully');
+      navigate('/login');
+    } catch (error) {
+      // If user already exists or server error
+      const msg = error.response?.data?.message || 'Registration failed';
+      alert(msg);
+    }
   };
 
   return (

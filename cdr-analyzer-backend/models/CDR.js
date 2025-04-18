@@ -1,18 +1,17 @@
 const mongoose = require('mongoose');
 
-const CDRSchema = new mongoose.Schema({
+const cdrSchema = new mongoose.Schema({
     from_no: String,
     to_no: String,
-    date: Date,   // Change to Date
+    date: Date,
     time: String,
-    duration: Number,  // Change to Number
-    cell_1_id: Number, // Change to Number
-    cell_2_id: Number, // Change to Number
-    type: Number, // Change to Number
+    duration: Number,
+    cell_1_id: Number,
+    cell_2_id: Number,
+    type: Number,
     imei: String,
     imsi: String,
-    roaming: Boolean  // Ensure you convert 1 = true, 0 = false
+    roaming: Boolean
 });
 
-// Export model
-module.exports = mongoose.model('CDR', CDRSchema);
+module.exports = mongoose.model('CDR', cdrSchema);

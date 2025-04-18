@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
 
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-    if (storedUser && storedUser.email === email && storedUser.password === password) {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/login', {
+        email,
+        password,
+      });
+
+      // Save token or isAuthenticated (depending on backend response)
       localStorage.setItem('isAuthenticated', 'true');
-      navigate('/dashboard'); // Redirect to Dashboard after login
-    } else {
-      alert('Invalid credentials');
+      alert(response.data.message || 'Login successful!');
+      navigate('/dashboard');
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Login failed';
+      alert(msg);
     }
   };
 

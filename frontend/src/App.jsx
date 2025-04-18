@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 import { CdrProvider } from './CdrContext_temp'; // Import the provider
 import Dashboard from './Dashboard';
-import UploadCDR from './Upload';
+import Upload from './Upload';  // Ensure the name matches
 import TrackByLocation from './Trackbylocation';
 import TrackbyNumber from './TrackbyNumber';
 import Sidebar from './Sidebar';
@@ -36,7 +36,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/upload" element={<UploadCDR />} />
+          <Route path="/upload" element={<Upload />} />  {/* Ensure this is correctly named */}
           <Route path="/track-location" element={<TrackByLocation />} />
           <Route path="/track-number" element={<TrackbyNumber />} />
           <Route path="/track-imei" element={<TrackByIMEI />} />

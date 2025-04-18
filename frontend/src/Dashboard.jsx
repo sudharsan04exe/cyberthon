@@ -15,14 +15,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ✅ Fetch Data from API when the component loads if context is empty
+  // ✅ Fetch Data from API when the component loads or data is updated
   useEffect(() => {
     if (cdrData.length === 0) {
       fetch(`${API_BASE_URL}/fetch-cdr`)
         .then((response) => response.json())
         .then((data) => {
           console.log("Fetched CDR Data:", data); // Debugging Output
-          setCdrData(Array.isArray(data) ? data : []);
+          setCdrData(data.success ? data.data : []); // Set data if the response is successful
           setLoading(false);
         })
         .catch((error) => {
@@ -30,9 +30,9 @@ const Dashboard = () => {
           setLoading(false);
         });
     } else {
-      setLoading(false);
+      setLoading(false); // If data already exists, stop loading
     }
-  }, [cdrData, setCdrData]);
+  }, []); // This will run only once when the component mounts
 
   const toggleSidebar = () => setShowSidebar(!showSidebar);
   const handleInputChange = (e) => {
@@ -112,7 +112,9 @@ const Dashboard = () => {
         </div>
 
         {error && <p className="text-red-500 mb-4">Error: {error}</p>}
-        {loading ? <p>Loading data...</p> : (
+        {loading ? (
+          <p>Loading data...</p>
+        ) : (
           <>
             {cdrData.length === 0 && <p className="text-gray-500">No data available. Please upload a valid CDR file.</p>}
             <DataTable columns={columns} data={filteredData} pagination highlightOnHover dense />

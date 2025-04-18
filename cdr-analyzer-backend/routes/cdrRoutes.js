@@ -1,10 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const CdrModel = require('../models/CDR');
+const CdrModel = require('../models/CDR'); // Ensure the model path is correct
 const multer = require('multer');
 const path = require('path');
 const XLSX = require('xlsx');
 const fs = require('fs');
+const UploadedFile = require('../models/uploadedFileModel'); // Model for storing metadata
 
 // ✅ Ensure uploads directory exists
 const uploadDir = path.join(__dirname, '../uploads');
@@ -31,12 +32,10 @@ router.get('/fetch-cdr', async (req, res) => {
 
 // ✅ Upload & Process CDR File (CSV or Excel)
 router.post('/upload', upload.single('cdrFile'), async (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
 
     try {
-        // ✅ Read Excel file
+        // Read the uploaded Excel file
         const workbook = XLSX.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
@@ -46,7 +45,7 @@ router.post('/upload', upload.single('cdrFile'), async (req, res) => {
             return res.status(400).json({ message: "Empty file uploaded" });
         }
 
-        // ✅ Normalize Data Fields Before Inserting
+        // Normalize data according to expected field format
         const normalizedData = sheet.map(record => ({
             from_no: String(record.from_no || ''),
             to_no: String(record.to_no || ''),
@@ -58,69 +57,37 @@ router.post('/upload', upload.single('cdrFile'), async (req, res) => {
             type: parseInt(record.type) || 0,
             imei: String(record.imei || ''),
             imsi: String(record.imsi || ''),
-            roaming: record.roaming === "1"
+            roaming: record.roaming === "1"  // Converting "1" to true
         }));
 
+        // Insert records into MongoDB
         await CdrModel.insertMany(normalizedData);
+
+        // ✅ Save file metadata
+        await UploadedFile.create({
+            filename: req.file.filename,
+            originalname: req.file.originalname,
+            uploadedBy: req.body.uploadedBy,  // Make sure to send uploadedBy in the request body
+            uploadDate: new Date(),
+        });
+
+        // Cleanup: Delete the temporary file after processing
         fs.unlinkSync(req.file.path);
+
         res.status(200).json({ message: `Uploaded & Inserted ${normalizedData.length} records` });
     } catch (error) {
         res.status(500).json({ error: "Failed to process file", details: error.message });
     }
 });
 
-// ✅ Insert a new CDR manually
-router.post('/add-cdr', async (req, res) => {
-    try {
-        const newCdr = new CdrModel(req.body);
-        await newCdr.save();
-        res.status(201).json({ message: "CDR added successfully", data: newCdr });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to add CDR", details: error.message });
-    }
-});
-// ✅ Update Date Format for All CDRs
-router.put('/update-date-format', async (req, res) => {
-    try {
-        // Find all records where date is stored as a string
-        const cdrs = await CdrModel.find({});
-
-        const bulkOps = cdrs
-            .filter(cdr => typeof cdr.date === 'string')
-            .map(cdr => ({
-                updateOne: {
-                    filter: { _id: cdr._id },
-                    update: { $set: { date: new Date(cdr.date) } }
-                }
-            }));
-
-        if (bulkOps.length > 0) {
-            await CdrModel.bulkWrite(bulkOps);
-            return res.status(200).json({ message: `Updated ${bulkOps.length} records successfully!` });
-        }
-
-        res.status(200).json({ message: "No records needed updating." });
-    } catch (error) {
-        res.status(500).json({ error: "Failed to update date format", details: error.message });
-    }
-});
-
-
-
 // ✅ List uploaded files
-router.get('/uploaded-files', (req, res) => {
-    fs.readdir(uploadDir, (err, files) => {
-        if (err) {
-            return res.status(500).json({ error: "Failed to fetch uploaded files" });
-        }
-
-        const fileList = files.map(filename => ({
-            filename: filename,
-            uploadDate: fs.statSync(path.join(uploadDir, filename)).mtime
-        }));
-
-        res.json(fileList);
-    });
+router.get("/uploaded-files", async (req, res) => {
+    try {
+        const files = await UploadedFile.find();  // Get metadata of uploaded files
+        res.json(files);
+    } catch (error) {
+        res.status(500).json({ error: "Error fetching uploaded files", message: error.message });
+    }
 });
 
 module.exports = router;
