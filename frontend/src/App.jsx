@@ -10,6 +10,7 @@ import TrackByIMEI from './TrackbyIMEI';
 import Login from './login';
 import Register from './register';
 import 'leaflet/dist/leaflet.css';
+import UploadedFiles from './Uploadedfiles';
 
 function App() {
   return (
@@ -36,7 +37,9 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/upload" element={<Upload />} />  {/* Ensure this is correctly named */}
+          <Route path="/upload" element={<Upload />} /> 
+          <Route path="/uploaded-files" element={<UploadedFiles />} />
+           {/* Ensure this is correctly named */}
           <Route path="/track-location" element={<TrackByLocation />} />
           <Route path="/track-number" element={<TrackbyNumber />} />
           <Route path="/track-imei" element={<TrackByIMEI />} />

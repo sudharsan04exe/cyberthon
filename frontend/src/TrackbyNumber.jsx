@@ -1,50 +1,70 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { CdrContext } from "./CdrContext_temp";
 
-// Dummy CDR data
-const dummyCdrData = [
-  {
-    number: "9876543210",
-    location: "Mumbai",
-    coordinates: { lat: 19.0760, lng: 72.8777 },
-    dateTime: "2025-04-01T10:00:00",
-    imei: "123456789012345"
-  },
-  {
-    number: "9876543210",
-    location: "Pune",
-    coordinates: { lat: 18.5204, lng: 73.8567 },
-    dateTime: "2025-04-02T14:30:00",
-    imei: "123456789012345"
-  },
-  {
-    number: "9876543210",
-    location: "Nashik",
-    coordinates: { lat: 19.9975, lng: 73.7898 },
-    dateTime: "2025-04-03T09:15:00",
-    imei: "123456789012345"
-  }
-];
+// 🗺️ Define cell ID to location mapping
+const cellIdToLocation = {
+  100: { name: "Chennai", lat: 13.0827, lng: 80.2707 },
+  101: { name: "Delhi", lat: 28.6139, lng: 77.209 },
+  102: { name: "Mumbai", lat: 19.076, lng: 72.8777 },
+  200: { name: "Bangalore", lat: 12.9716, lng: 77.5946 },
+  201: { name: "Hyderabad", lat: 17.385, lng: 78.4867 },
+  // Add more mappings as needed
+};
 
 const TrackByNumber = () => {
+  const { cdrData } = useContext(CdrContext);
   const [number, setNumber] = useState("");
   const [fromDateTime, setFromDateTime] = useState("");
   const [toDateTime, setToDateTime] = useState("");
   const [filteredData, setFilteredData] = useState([]);
   const [showMap, setShowMap] = useState(false);
 
+  useEffect(() => {
+    if (cdrData && Array.isArray(cdrData)) {
+      setFilteredData(cdrData);
+      setShowMap(cdrData.length > 0);
+    }
+  }, [cdrData]);
+
   const handleSearch = () => {
+    if (!cdrData || !Array.isArray(cdrData)) {
+      setFilteredData([]);
+      setShowMap(false);
+      return;
+    }
+
     const from = fromDateTime ? new Date(fromDateTime) : null;
     const to = toDateTime ? new Date(toDateTime) : null;
 
-    const result = dummyCdrData.filter((item) => {
-      const itemDate = new Date(item.dateTime);
-      const numberMatch = number ? item.number.includes(number) : true;
-      const fromMatch = from ? itemDate >= from : true;
-      const toMatch = to ? itemDate <= to : true;
-      return numberMatch && fromMatch && toMatch;
-    });
+    const result = cdrData
+      .filter((item) => {
+        const itemDate = item.date ? new Date(item.date) : null;
+        const numberMatch = number
+          ? (item.from_no && item.from_no.includes(number)) ||
+            (item.to_no && item.to_no.includes(number))
+          : true;
+        const fromMatch = from && itemDate ? itemDate >= from : true;
+        const toMatch = to && itemDate ? itemDate <= to : true;
+        return numberMatch && fromMatch && toMatch;
+      })
+      .map((item) => {
+        const locationInfo = cellIdToLocation[item.cell_1_id] || {
+          name: "Unknown",
+          lat: 0,
+          lng: 0,
+        };
+        return {
+          ...item,
+          location: locationInfo.name,
+          coordinates: {
+            lat: locationInfo.lat,
+            lng: locationInfo.lng,
+          },
+          dateTime: item.date ? new Date(item.date) : null, // Ensure correct date format
+        };
+      });
 
     setFilteredData(result);
     setShowMap(result.length > 0);
@@ -76,7 +96,7 @@ const TrackByNumber = () => {
         />
         <button
           onClick={handleSearch}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 col-span-1"
         >
           Search
         </button>
@@ -84,30 +104,34 @@ const TrackByNumber = () => {
 
       {/* Table View */}
       <div className="overflow-x-auto mb-8">
-        <table className="min-w-full border border-gray-300">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border px-4 py-2">Number</th>
-              <th className="border px-4 py-2">Location</th>
-              <th className="border px-4 py-2">Date & Time</th>
-              <th className="border px-4 py-2">IMEI</th>
+        <table className="min-w-full border border-gray-300 table-auto">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border px-4 py-2 text-left">From</th>
+              <th className="border px-4 py-2 text-left">To</th>
+              <th className="border px-4 py-2 text-left">Location</th>
+              <th className="border px-4 py-2 text-left">Date & Time</th>
+              <th className="border px-4 py-2 text-left">IMEI</th>
             </tr>
           </thead>
           <tbody>
             {filteredData.length > 0 ? (
               filteredData.map((item, index) => (
-                <tr key={index}>
-                  <td className="border px-4 py-2">{item.number}</td>
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="border px-4 py-2">{item.from_no}</td>
+                  <td className="border px-4 py-2">{item.to_no}</td>
                   <td className="border px-4 py-2">{item.location}</td>
                   <td className="border px-4 py-2">
-                    {new Date(item.dateTime).toLocaleString()}
+                    {item.dateTime
+                      ? item.dateTime.toLocaleString()
+                      : "-"}
                   </td>
                   <td className="border px-4 py-2">{item.imei}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="4" className="border px-4 py-2 text-center">
+                <td colSpan="5" className="border px-4 py-2 text-center">
                   No matching records found.
                 </td>
               </tr>
@@ -116,15 +140,15 @@ const TrackByNumber = () => {
         </table>
       </div>
 
-      {/* Map Visualization */}
-      {showMap && (
-        <div className="h-[400px] w-full">
+      {/* Map View */}
+      {showMap && filteredData[0]?.coordinates?.lat !== 0 && (
+        <div className="h-[400px] w-full overflow-hidden">
           <MapContainer
             center={[
-              filteredData[0].coordinates.lat,
-              filteredData[0].coordinates.lng
+              filteredData[0]?.coordinates?.lat || 0,
+              filteredData[0]?.coordinates?.lng || 0,
             ]}
-            zoom={7}
+            zoom={6}
             style={{ height: "100%", width: "100%" }}
           >
             <TileLayer
@@ -134,16 +158,15 @@ const TrackByNumber = () => {
             {filteredData.map((item, index) => (
               <Marker
                 key={index}
-                position={[
-                  item.coordinates.lat,
-                  item.coordinates.lng
-                ]}
+                position={[item.coordinates?.lat || 0, item.coordinates?.lng || 0]}
               >
                 <Popup>
                   <div>
                     <strong>{item.location}</strong>
                     <br />
-                    {new Date(item.dateTime).toLocaleString()}
+                    {item.dateTime
+                      ? item.dateTime.toLocaleString()
+                      : "-"}
                     <br />
                     IMEI: {item.imei}
                   </div>
