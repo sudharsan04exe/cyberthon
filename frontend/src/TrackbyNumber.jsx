@@ -13,9 +13,9 @@ const cellIdToLocation = {
   // Add more mappings as needed
 };
 
-const TrackByNumber = () => {
+const TrackByLocation = () => {
   const { cdrData } = useContext(CdrContext);
-  const [number, setNumber] = useState("");
+  const [location, setLocation] = useState("");
   const [fromDateTime, setFromDateTime] = useState("");
   const [toDateTime, setToDateTime] = useState("");
   const [filteredData, setFilteredData] = useState([]);
@@ -41,13 +41,15 @@ const TrackByNumber = () => {
     const result = cdrData
       .filter((item) => {
         const itemDate = item.date ? new Date(item.date) : null;
-        const numberMatch = number
-          ? (item.from_no && item.from_no.includes(number)) ||
-            (item.to_no && item.to_no.includes(number))
+        const locationMatch = location
+          ? (cellIdToLocation[item.cell_1_id] &&
+              cellIdToLocation[item.cell_1_id].name
+                .toLowerCase()
+                .includes(location.toLowerCase()))
           : true;
         const fromMatch = from && itemDate ? itemDate >= from : true;
         const toMatch = to && itemDate ? itemDate <= to : true;
-        return numberMatch && fromMatch && toMatch;
+        return locationMatch && fromMatch && toMatch;
       })
       .map((item) => {
         const locationInfo = cellIdToLocation[item.cell_1_id] || {
@@ -72,14 +74,14 @@ const TrackByNumber = () => {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Track by Number</h2>
+      <h2 className="text-xl font-bold mb-4">Track by Location</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
         <input
           type="text"
-          placeholder="Source Number"
-          value={number}
-          onChange={(e) => setNumber(e.target.value)}
+          placeholder="Location"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
           className="p-2 border rounded"
         />
         <input
@@ -180,4 +182,4 @@ const TrackByNumber = () => {
   );
 };
 
-export default TrackByNumber;
+export default TrackByLocation;
