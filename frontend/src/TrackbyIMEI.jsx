@@ -1,138 +1,171 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useContext } from "react";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import { CdrContext } from "./CdrContext_temp";
+
+// 📍 Cell ID to location mapping
+const cellIdToLocation = {
+  100: { name: "Chennai", lat: 13.0827, lng: 80.2707 },
+  101: { name: "Delhi", lat: 28.6139, lng: 77.209 },
+  102: { name: "Mumbai", lat: 19.076, lng: 72.8777 },
+  200: { name: "Bangalore", lat: 12.9716, lng: 77.5946 },
+  201: { name: "Hyderabad", lat: 17.385, lng: 78.4867 },
+  // Add more if needed
+};
 
 const TrackByIMEI = () => {
-  const [imei, setIMEI] = useState('');
-  const [fromDateTime, setFromDateTime] = useState('');
-  const [toDateTime, setToDateTime] = useState('');
+  const { cdrData } = useContext(CdrContext);
+  const [imei, setImei] = useState("");
+  const [fromDateTime, setFromDateTime] = useState("");
+  const [toDateTime, setToDateTime] = useState("");
   const [filteredData, setFilteredData] = useState([]);
   const [showMap, setShowMap] = useState(false);
 
-  // Dummy Data
-  const dummyData = [
-    { imei: '356789123456789', dateTime: '2025-03-10T10:30', number: '9876543210', location: 'Mumbai', duration: '5 mins' },
-    { imei: '356789123456700', dateTime: '2025-03-10T15:00', number: '9123456780', location: 'Delhi', duration: '3 mins' },
-    { imei: '356789123456789', dateTime: '2025-03-10T16:45', number: '9988776655', location: 'Mumbai', duration: '7 mins' },
-    { imei: '356789123456701', dateTime: '2025-03-11T09:00', number: '9012345678', location: 'Mumbai', duration: '6 mins' },
-  ];
+  useEffect(() => {
+    if (cdrData && Array.isArray(cdrData)) {
+      setFilteredData(cdrData);
+      setShowMap(cdrData.length > 0);
+    }
+  }, [cdrData]);
 
   const handleSearch = () => {
-    if (!imei.trim()) {
-      alert('Please enter an IMEI number.');
-      return;
-    }
+    if (!cdrData || !Array.isArray(cdrData)) return;
 
-    let result = dummyData.filter((item) => item.imei.includes(imei));
+    const from = fromDateTime ? new Date(fromDateTime) : null;
+    const to = toDateTime ? new Date(toDateTime) : null;
 
-    if (fromDateTime) {
-      const from = new Date(fromDateTime).getTime();
-      result = result.filter((item) => new Date(item.dateTime).getTime() >= from);
-    }
-
-    if (toDateTime) {
-      const to = new Date(toDateTime).getTime();
-      result = result.filter((item) => new Date(item.dateTime).getTime() <= to);
-    }
+    const result = cdrData
+      .filter((item) => {
+        const itemDate = item.date ? new Date(item.date) : null;
+        const imeiMatch = imei ? item.imei?.includes(imei) : true;
+        const fromMatch = from && itemDate ? itemDate >= from : true;
+        const toMatch = to && itemDate ? itemDate <= to : true;
+        return imeiMatch && fromMatch && toMatch;
+      })
+      .map((item) => {
+        const locationInfo = cellIdToLocation[item.cell_1_id] || {
+          name: "Unknown",
+          lat: 0,
+          lng: 0,
+        };
+        return {
+          ...item,
+          location: locationInfo.name,
+          coordinates: {
+            lat: locationInfo.lat,
+            lng: locationInfo.lng,
+          },
+          dateTime: item.date ? new Date(item.date) : null,
+        };
+      });
 
     setFilteredData(result);
-    setShowMap(false); // Hide map when new search happens
-  };
-
-  const handleVisualize = () => {
-    if (filteredData.length === 0) {
-      alert('No data to visualize. Please search first.');
-      return;
-    }
-
-    setShowMap(true);
-  };
-
-  const openGoogleMaps = () => {
-    const baseUrl = 'https://www.google.com/maps/search/';
-    const locations = filteredData.map((item) => item.location);
-    const uniqueLocations = [...new Set(locations)];
-
-    uniqueLocations.forEach((loc) => {
-      window.open(`${baseUrl}${encodeURIComponent(loc)}`, '_blank');
-    });
+    setShowMap(result.length > 0);
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-2xl font-bold mb-4">Track & Trace - By IMEI</h2>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">Track by IMEI</h2>
 
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
         <input
           type="text"
-          placeholder="Enter IMEI Number"
+          placeholder="IMEI Number"
           value={imei}
-          onChange={(e) => setIMEI(e.target.value)}
-          className="border border-gray-300 px-4 py-2 rounded w-full md:w-64"
+          onChange={(e) => setImei(e.target.value)}
+          className="p-2 border rounded"
         />
         <input
           type="datetime-local"
           value={fromDateTime}
           onChange={(e) => setFromDateTime(e.target.value)}
-          className="border border-gray-300 px-4 py-2 rounded w-full md:w-64"
+          className="p-2 border rounded"
         />
         <input
           type="datetime-local"
           value={toDateTime}
           onChange={(e) => setToDateTime(e.target.value)}
-          className="border border-gray-300 px-4 py-2 rounded w-full md:w-64"
+          className="p-2 border rounded"
         />
         <button
           onClick={handleSearch}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 col-span-1"
         >
           Search
         </button>
-        <button
-          onClick={handleVisualize}
-          className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700"
-        >
-          Visualize
-        </button>
       </div>
 
-      {filteredData.length > 0 ? (
-        <div className="overflow-x-auto mt-6">
-          <h3 className="text-lg font-semibold mb-3">Filtered Records</h3>
-          <table className="w-full border border-gray-300 text-sm">
-            <thead className="bg-gray-200">
-              <tr>
-                <th className="border px-3 py-2">IMEI</th>
-                <th className="border px-3 py-2">Date & Time</th>
-                <th className="border px-3 py-2">Mobile Number</th>
-                <th className="border px-3 py-2">Location</th>
-                <th className="border px-3 py-2">Duration</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredData.map((row, index) => (
-                <tr key={index} className="text-center">
-                  <td className="border px-3 py-2">{row.imei}</td>
-                  <td className="border px-3 py-2">{new Date(row.dateTime).toLocaleString()}</td>
-                  <td className="border px-3 py-2">{row.number}</td>
-                  <td className="border px-3 py-2">{row.location}</td>
-                  <td className="border px-3 py-2">{row.duration}</td>
+      {/* Table */}
+      <div className="overflow-x-auto mb-8">
+        <table className="min-w-full border border-gray-300 table-auto">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border px-4 py-2 text-left">From</th>
+              <th className="border px-4 py-2 text-left">To</th>
+              <th className="border px-4 py-2 text-left">Location</th>
+              <th className="border px-4 py-2 text-left">Date & Time</th>
+              <th className="border px-4 py-2 text-left">IMEI</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.length > 0 ? (
+              filteredData.map((item, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="border px-4 py-2">{item.from_no}</td>
+                  <td className="border px-4 py-2">{item.to_no}</td>
+                  <td className="border px-4 py-2">{item.location}</td>
+                  <td className="border px-4 py-2">
+                    {item.dateTime ? item.dateTime.toLocaleString() : "-"}
+                  </td>
+                  <td className="border px-4 py-2">{item.imei}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <p className="mt-6 text-gray-600">No records found for the selected filters.</p>
-      )}
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="border px-4 py-2 text-center">
+                  No matching records found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      {showMap && filteredData.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">Visualize on Google Maps:</h3>
-          <button
-            onClick={openGoogleMaps}
-            className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700"
+      {/* Map */}
+      {showMap && filteredData[0]?.coordinates?.lat !== 0 && (
+        <div className="h-[400px] w-full overflow-hidden">
+          <MapContainer
+            center={[
+              filteredData[0]?.coordinates?.lat || 0,
+              filteredData[0]?.coordinates?.lng || 0,
+            ]}
+            zoom={6}
+            style={{ height: "100%", width: "100%" }}
           >
-            Open in Google Maps
-          </button>
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; OpenStreetMap contributors"
+            />
+            {filteredData.map((item, index) => (
+              <Marker
+                key={index}
+                position={[
+                  item.coordinates?.lat || 0,
+                  item.coordinates?.lng || 0,
+                ]}
+              >
+                <Popup>
+                  <div>
+                    <strong>{item.location}</strong>
+                    <br />
+                    {item.dateTime ? item.dateTime.toLocaleString() : "-"}
+                    <br />
+                    IMEI: {item.imei}
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
         </div>
       )}
     </div>
